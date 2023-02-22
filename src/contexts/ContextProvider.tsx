@@ -1,6 +1,7 @@
 import { WalletAdapterNetwork, WalletError } from '@solana/wallet-adapter-base';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import {
+    BackpackWalletAdapter,
     PhantomWalletAdapter,
     SolflareWalletAdapter,
     SolletExtensionWalletAdapter,
@@ -17,30 +18,34 @@ import { NetworkConfigurationProvider, useNetworkConfiguration } from './Network
 import dynamic from "next/dynamic";
 
 const ReactUIWalletModalProviderDynamic = dynamic(
-  async () =>
-    (await import("@solana/wallet-adapter-react-ui")).WalletModalProvider,
-  { ssr: false }
+    async () =>
+        (await import("@solana/wallet-adapter-react-ui")).WalletModalProvider,
+    { ssr: false }
 );
+
+const endpoint = {
+    'devnet': process.env.NEXT_PUBLIC_RPC_ENDPOINT_DEVNET,
+    'mainnet-beta': process.env.NEXT_PUBLIC_RPC_ENDPOINT_MAINNET,
+};
+
+const customClustApiUrl = (cluster: Cluster) => {
+    return endpoint[cluster];
+}
 
 const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const { autoConnect } = useAutoConnect();
     const { networkConfiguration } = useNetworkConfiguration();
     const network = networkConfiguration as WalletAdapterNetwork;
-    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-
-    console.log(network);
+    const endpoint = useMemo(() => customClustApiUrl(network), [network]);
 
     const wallets = useMemo(
         () => [
             new PhantomWalletAdapter(),
             new SolflareWalletAdapter(),
-            new SolletWalletAdapter({ network }),
-            new SolletExtensionWalletAdapter({ network }),
+            new BackpackWalletAdapter(),
             new TorusWalletAdapter(),
-            // new LedgerWalletAdapter(),
-            // new SlopeWalletAdapter(),
         ],
-        [network]
+        []
     );
 
     const onError = useCallback(
@@ -58,7 +63,7 @@ const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 <ReactUIWalletModalProviderDynamic>
                     {children}
                 </ReactUIWalletModalProviderDynamic>
-			</WalletProvider>
+            </WalletProvider>
         </ConnectionProvider>
     );
 };
