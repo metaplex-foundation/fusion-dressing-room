@@ -17,7 +17,7 @@
     "@metaplex-foundation/js": "^0.18.0",
     "@metaplex-foundation/mpl-trifle": "^0.3.2",
     "@mui/icons-material": "^5.11.0",
-    "@mui/material": "^5.11.7",
+    "@mui/material": "^5.11.10",
     "@noble/ed25519": "^1.7.1",
     "@solana/spl-token": "^0.3.7",
     "@solana/wallet-adapter-base": "^0.9.20",
