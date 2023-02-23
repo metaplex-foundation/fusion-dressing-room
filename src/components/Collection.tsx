@@ -38,13 +38,13 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter }) => {
     })
     
     let filteredList = nftList.filter(filter);
-    console.log(filteredList);
+    // console.log(filteredList);
 
     const { getUserNFTs } = useUserNFTsStore()
 
     useEffect(() => {
         if (wallet.publicKey) {
-            console.log(wallet.publicKey.toBase58())
+            // console.log(wallet.publicKey.toBase58())
             getUserNFTs(wallet.publicKey, connection)
         }
     }, [wallet.publicKey, connection, getUserNFTs])

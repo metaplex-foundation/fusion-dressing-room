@@ -12,10 +12,10 @@ import Stack from '@mui/material/Stack';
 // Store
 import useUserSOLBalanceStore from '../../stores/useUserSOLBalanceStore';
 import useUserNFTsStore from '../../stores/useUserNFTsStore';
+import { findTriflePda, createTrifleAccount } from '../../utils/trifle';
 import { Collection } from 'components/Collection';
 import { Nft, PublicKey, Sft } from '@metaplex-foundation/js';
-import { PROGRAM_ADDRESS as TRIFLE_PROGRAM_ADDRESS } from '@metaplex-foundation/mpl-trifle';
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 
 function filterByParentCollection(nft: Nft | Sft) {
   return (nft.collection?.address && (nft.collection?.address.toString() === process.env.NEXT_PUBLIC_PARENT_COLLECTION_MINT));
@@ -30,20 +30,6 @@ function filterByTraitCollections(nft: Nft | Sft) {
   }
   return false;
 }
-
-const findTriflePda = async (
-  mint: PublicKey,
-  authority: PublicKey,
-) => {
-  return await PublicKey.findProgramAddress(
-    [
-      Buffer.from("trifle"),
-      mint.toBuffer(),
-      authority.toBuffer(),
-    ],
-    new PublicKey(TRIFLE_PROGRAM_ADDRESS),
-  );
-};
 
 export const FusionView: FC = ({ }) => {
   const wallet = useWallet();
@@ -62,7 +48,7 @@ export const FusionView: FC = ({ }) => {
   const [selectedTraits, setSelectedTraits] = useState<(Nft | Sft)[]>([]);
   const [needsTrifle, setNeedsTrifle] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
-  console.log(selectedParent);
+  // console.log(selectedParent);
 
   function setSelectionParent(nfts: (Nft | Sft)[]) {
     if (nfts.length > 0) {
@@ -78,6 +64,7 @@ export const FusionView: FC = ({ }) => {
 
   const handleClose = () => {
     console.log("handleClose");
+    createTrifleAccount(connection, selectedParent as Nft, wallet);
     setOpen(false);
   };
 
@@ -89,7 +76,7 @@ export const FusionView: FC = ({ }) => {
 
   useEffect(() => {
     if (wallet.publicKey) {
-      console.log(wallet.publicKey.toBase58())
+      // console.log(wallet.publicKey.toBase58())
       getUserNFTs(wallet.publicKey, connection)
     }
   }, [wallet.publicKey, connection, getUserNFTs])
@@ -98,7 +85,7 @@ export const FusionView: FC = ({ }) => {
     async function check_trifle() {
       if (connection && selectedParent) {
         const auth_pubkey = new PublicKey(process.env.NEXT_PUBLIC_FUSION_AUTHORITY);
-        const [triflePda] = await findTriflePda(selectedParent.mint.address, auth_pubkey);
+        const [triflePda] = findTriflePda(selectedParent.mint.address, auth_pubkey);
         const trifleAccount = await connection.getAccountInfo(triflePda);
         if (trifleAccount == null) {
           setNeedsTrifle(true);
@@ -136,21 +123,12 @@ export const FusionView: FC = ({ }) => {
           />
           <Collection setSelection={setSelectionTraits} filter={filterByTraitCollections} />
         </Stack >
-        <Dialog open={open} onClose={handleClose}>
-          <DialogTitle>Subscribe</DialogTitle>
+        <Dialog open={open} onClose={handleCancel}>
+          <DialogTitle>Enable Fusion</DialogTitle>
           <DialogContent>
             <DialogContentText>
               This NFT does not have Fusion enabled. Enable now?
             </DialogContentText>
-            {/* <TextField
-              autoFocus
-              margin="dense"
-              id="name"
-              label="Email Address"
-              type="email"
-              fullWidth
-              variant="standard"
-            /> */}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCancel}>Cancel</Button>
