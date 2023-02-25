@@ -12,19 +12,21 @@ import Stack from '@mui/material/Stack';
 // Store
 import useUserSOLBalanceStore from '../../stores/useUserSOLBalanceStore';
 import useUserNFTsStore from '../../stores/useUserNFTsStore';
-import { findTriflePda, createTrifleAccount } from '../../utils/trifle';
+import { findTriflePda, createTrifleAccount, getConstraintModel } from '../../utils/trifle';
 import { Collection } from 'components/Collection';
 import { Nft, PublicKey, Sft } from '@metaplex-foundation/js';
+import { EscrowConstraintModel } from '@metaplex-foundation/mpl-trifle';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Preview } from 'components/Preview';
 
-function filterByParentCollection(nft: Nft | Sft) {
+function filterByParentCollection(nft: Nft | Sft, props: any) {
   return (nft.collection?.address && (nft.collection?.address.toString() === process.env.NEXT_PUBLIC_PARENT_COLLECTION_MINT));
 }
 
-function filterByTraitCollections(nft: Nft | Sft) {
+function filterByTraitCollections(nft: Nft | Sft, props: any) {
   const traitCollections = process.env.NEXT_PUBLIC_TRAIT_COLLECTION_MINTS.split(',');
   for (const traitCollection of traitCollections) {
-    if (nft.collection?.address && (nft.collection?.address.toString() === traitCollection)) {
+    if (nft.collection?.address && (nft.collection?.address.toString() === props.collection)) {
       return true;
     }
   }
@@ -45,9 +47,12 @@ export const FusionView: FC = ({ }) => {
   })
   const { getUserNFTs } = useUserNFTsStore();
   const [selectedParent, setSelectedParent] = useState<Nft | Sft>(null);
+  const [selectedTraitsMap, setSelectedTraitsMap] = useState<Map<string, (Nft | Sft)[]>>(new Map<string, (Nft | Sft)[]>());
   const [selectedTraits, setSelectedTraits] = useState<(Nft | Sft)[]>([]);
   const [needsTrifle, setNeedsTrifle] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
+  const [constraintModel, setConstraintModel] = useState<EscrowConstraintModel>(null);
+  const [traitCollections, setTraitCollections] = useState(new Map<string, PublicKey>());
   // console.log(selectedParent);
 
   function setSelectionParent(nfts: (Nft | Sft)[]) {
@@ -56,9 +61,12 @@ export const FusionView: FC = ({ }) => {
     }
   }
 
-  function setSelectionTraits(nfts: (Nft | Sft)[]) {
-    if (nfts.length > 0) {
-      setSelectedTraits(nfts);
+  function setSelectionTraits(key: string, nfts: (Nft | Sft)[]) {
+    if (nfts && nfts.length > 0) {
+      let nftsMap = selectedTraitsMap;
+      nftsMap = nftsMap.set(key, nfts);
+      setSelectedTraitsMap(nftsMap);
+      setSelectedTraits(Array.from(nftsMap.values()).flat());
     }
   }
 
@@ -100,9 +108,35 @@ export const FusionView: FC = ({ }) => {
     check_trifle();
   }, [connection, selectedParent, open])
 
+  useEffect(() => {
+    async function get_cm() {
+      if (!connection) {
+        return;
+      }
+
+      if (connection && !constraintModel) {
+        setConstraintModel(await getConstraintModel(connection, new PublicKey(process.env.NEXT_PUBLIC_CONSTRAINT_MODEL_ADDRESS)));
+      }
+
+      if (constraintModel && constraintModel)
+      {
+        let traitCollections = new Map<string, PublicKey>();
+        for (const entry of constraintModel?.constraints.entries()) {
+          if (entry[1].constraintType.__kind === "Collection") {
+            traitCollections.set(entry[0], entry[1].constraintType.fields[0]);
+          }
+        }
+
+        setTraitCollections(traitCollections);
+        console.log(traitCollections);
+      }
+    }
+    get_cm();
+  }, [connection, constraintModel])
+
   if (selectedParent == null) {
     return (
-      <Collection setSelection={setSelectionParent} filter={filterByParentCollection} />
+      <Collection setSelection={setSelectionParent} filter={filterByParentCollection} filterProps={null} />
     );
   }
   else {
@@ -114,14 +148,24 @@ export const FusionView: FC = ({ }) => {
           alignItems="stretch"
           spacing={1}
         >
-          <img
+          {/* <img
             src={`${selectedParent.json?.image}?w=248&fit=crop&auto=format`}
             srcSet={`${selectedParent.json?.image}?w=248&fit=crop&auto=format&dpr=2 2x`}
             alt={selectedParent.name}
             loading="lazy"
             style={{ width: "75%", objectFit: "contain" }}
+          /> */}
+          <Preview
+            parent={selectedParent as Nft}
+            traits={selectedTraits}
           />
-          <Collection setSelection={setSelectionTraits} filter={filterByTraitCollections} />
+          {[...traitCollections].map(([key, value]) => (
+            <div key={key}>
+              <h2>{key}</h2>
+              <Collection setSelection={(nfts) => {setSelectionTraits(key, nfts)}} filter={filterByTraitCollections} filterProps={{ collection: "vUBfs67kxgr2KzgmhPCDzivCvTQDaoSZKppokcFa8aK" }} />
+            </div>
+          ))
+          }
         </Stack >
         <Dialog open={open} onClose={handleCancel}>
           <DialogTitle>Enable Fusion</DialogTitle>

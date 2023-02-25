@@ -1,5 +1,5 @@
 import { Connection, PublicKey, SYSVAR_INSTRUCTIONS_PUBKEY, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
-import { PROGRAM_ADDRESS as TRIFLE_PROGRAM_ADDRESS, createCreateTrifleAccountInstruction } from '@metaplex-foundation/mpl-trifle';
+import { PROGRAM_ADDRESS as TRIFLE_PROGRAM_ADDRESS, createCreateTrifleAccountInstruction, EscrowConstraintModel } from '@metaplex-foundation/mpl-trifle';
 import { PROGRAM_ADDRESS as TOKEN_METADATA_PROGRAM_ADDRESS } from '@metaplex-foundation/mpl-token-metadata';
 import { Nft } from "@metaplex-foundation/js";
 import { WalletContextState } from "@solana/wallet-adapter-react";
@@ -112,4 +112,16 @@ export const createTrifleAccount = async (connection: Connection, selectedNFT: N
         console.log("Failed to create trifle account");
     }
 
+}
+
+export const getConstraintModel = async (connection: Connection, modelAddress: PublicKey) => {
+    const accountInfo = await connection.getAccountInfo(modelAddress);
+    if (accountInfo) {
+        const account: EscrowConstraintModel =
+            EscrowConstraintModel.fromAccountInfo(accountInfo)[0];
+        return account;
+    } else {
+        console.log("Unable to fetch account");
+        return null;
+    }
 }

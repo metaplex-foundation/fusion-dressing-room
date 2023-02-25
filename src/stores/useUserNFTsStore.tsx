@@ -29,7 +29,7 @@ const useUserNFTsStore = create<UserNFTsStore>((set, _get) => ({
 
     set((s) => {
       s.nftList = nfts;
-      console.log(`nftList updated, `, nfts);
+      // console.log(`nftList updated, `, nfts);
     });
   },
 }));

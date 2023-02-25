@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 // Next, React
-import { Dispatch, FC, SetStateAction, useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 
 // Wallet
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
@@ -15,16 +15,17 @@ import ImageListItemBar from '@mui/material/ImageListItemBar';
 // Store
 import useUserSOLBalanceStore from '../stores/useUserSOLBalanceStore';
 import useUserNFTsStore from '../stores/useUserNFTsStore';
-import { Hidden, IconButton } from '@mui/material';
-import { JoinFull } from '@mui/icons-material';
 import { Nft, Sft } from '@metaplex-foundation/js';
 
 export class CollectionProps {
     setSelection: (nfts: (Nft | Sft)[]) => void;
-    filter: (nft: Nft | Sft) => boolean;
+    filter: (nft: Nft | Sft, props: any) => boolean;
+    filterProps: any;
 }
 
-export const Collection: FC<CollectionProps> = ({ setSelection, filter }) => {
+export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterProps }) => {
+    const [ selectedNft, setSelectedNft ] = useState<Nft | Sft>(null);
+
     const wallet = useWallet();
     const { connection } = useConnection();
 
@@ -37,7 +38,12 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter }) => {
         return 0;
     })
     
-    let filteredList = nftList.filter(filter);
+    let filteredList = [];
+    for (const nft of nftList) {
+        if (filter(nft, filterProps)) {
+            filteredList.push(nft);
+        }
+    }
     // console.log(filteredList);
 
     const { getUserNFTs } = useUserNFTsStore()
@@ -49,6 +55,11 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter }) => {
         }
     }, [wallet.publicKey, connection, getUserNFTs])
 
+    useEffect(() => {
+        setSelection([selectedNft]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedNft])
+
     return (
         <ImageList sx={{ width: "100%", height: "100%", justifySelf: "center"}} cols={4}>
             {filteredList.map((nft) => (
@@ -58,8 +69,8 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter }) => {
                         srcSet={`${nft.json?.image}?w=248&fit=crop&auto=format&dpr=2 2x`}
                         alt={nft.name}
                         loading="lazy"
-                        onClick={() => {setSelection([nft])}}
-                        style={{cursor: "pointer"}}
+                        onClick={() => {setSelectedNft(nft)}}
+                        style={{cursor: "pointer", border: selectedNft === nft ? "10px solid #0F0" : "none"}}
                     />
                     <ImageListItemBar
                         title={nft.name}
