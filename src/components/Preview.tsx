@@ -1,4 +1,5 @@
 import { Nft, Sft } from '@metaplex-foundation/js';
+import { Button, Stack } from '@mui/material';
 import { FC, useEffect, useRef, useState } from 'react';
 
 export class PreviewProps {
@@ -11,6 +12,14 @@ export const Preview: FC<PreviewProps> = ({ parent, traits }) => {
     const imgLoadArray = new Array(1 + traits.length).fill(false);
     const imgArray = new Array(1 + traits.length).fill(null);
 
+    // const handleDownload = async () => {
+    //     let image = canvasRef.current.toDataURL("image/png").replace("image/png", "image/octet-stream");
+    //     let link = document.createElement('a');
+    //     link.download = "BabyBread.png";
+    //     link.href = image;
+    //     link.click();
+    // };
+
     useEffect(() => {
         const render = () => {
             const canvas = canvasRef.current
@@ -22,13 +31,13 @@ export const Preview: FC<PreviewProps> = ({ parent, traits }) => {
                 canvasRef.current.height = imgArray[0].height;
                 for (let img of imgArray) {
                     console.log(img);
-                    ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.width * (img.height / img.width));
+                    if (img) {
+                        ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.width * (img.height / img.width));
+                    }
                 }
             }
 
-            if (imgLoadArray.every((e) => e)) {
-                draw(context);
-            }
+            draw(context);
         }
 
         if (!imgArray[0]) {
@@ -77,9 +86,23 @@ export const Preview: FC<PreviewProps> = ({ parent, traits }) => {
     // }, [imgArray, imgLoadArray])
 
     return (
-        <canvas
-            ref={canvasRef}
-            style={{ width: "50%" }}
-        />
+        <Stack
+            direction="column"
+            justifyContent="center"
+            alignItems="center"
+            spacing={1}
+            width={"75%"}
+        >
+            <canvas
+                ref={canvasRef}
+                style={{ width: "100%" }}
+            />
+            {/* <Button
+                variant="contained" onClick={handleDownload}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+                Download
+            </Button> */}
+        </Stack>
     )
 }

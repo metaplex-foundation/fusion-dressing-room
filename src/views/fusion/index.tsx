@@ -68,6 +68,8 @@ export const FusionView: FC = ({ }) => {
       setSelectedTraitsMap(nftsMap);
       setSelectedTraits(Array.from(nftsMap.values()).flat());
     }
+    console.log(selectedTraitsMap);
+    console.log(selectedTraits);
   }
 
   const handleClose = () => {
@@ -118,8 +120,7 @@ export const FusionView: FC = ({ }) => {
         setConstraintModel(await getConstraintModel(connection, new PublicKey(process.env.NEXT_PUBLIC_CONSTRAINT_MODEL_ADDRESS)));
       }
 
-      if (constraintModel && constraintModel)
-      {
+      if (constraintModel && constraintModel) {
         let traitCollections = new Map<string, PublicKey>();
         for (const entry of constraintModel?.constraints.entries()) {
           if (entry[1].constraintType.__kind === "Collection") {
@@ -159,13 +160,21 @@ export const FusionView: FC = ({ }) => {
             parent={selectedParent as Nft}
             traits={selectedTraits}
           />
-          {[...traitCollections].map(([key, value]) => (
-            <div key={key}>
-              <h2>{key}</h2>
-              <Collection setSelection={(nfts) => {setSelectionTraits(key, nfts)}} filter={filterByTraitCollections} filterProps={{ collection: "vUBfs67kxgr2KzgmhPCDzivCvTQDaoSZKppokcFa8aK" }} />
-            </div>
-          ))
-          }
+          <Stack
+            direction="column"
+            justifyContent="space-evenly"
+            alignItems="stretch"
+            spacing={4}
+            width={"100%"}
+          >
+            {[...traitCollections].map(([key, value]) => (
+              <div key={key}>
+                <h2>{key}</h2>
+                <Collection setSelection={(nfts) => { setSelectionTraits(key, nfts) }} filter={filterByTraitCollections} filterProps={{ collection: value.toString() }} />
+              </div>
+            ))
+            }
+          </Stack>
         </Stack >
         <Dialog open={open} onClose={handleCancel}>
           <DialogTitle>Enable Fusion</DialogTitle>
