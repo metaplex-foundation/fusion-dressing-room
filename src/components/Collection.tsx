@@ -24,7 +24,7 @@ export class CollectionProps {
 }
 
 export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterProps }) => {
-    const [ selectedNft, setSelectedNft ] = useState<Nft | Sft>(null);
+    const [selectedNft, setSelectedNft] = useState<Nft | Sft>(null);
 
     const wallet = useWallet();
     const { connection } = useConnection();
@@ -37,7 +37,7 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterPr
         if (nft0.name > nft1.name) return 1;
         return 0;
     })
-    
+
     let filteredList = [];
     for (const nft of nftList) {
         if (filter(nft, filterProps)) {
@@ -57,11 +57,11 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterPr
 
     useEffect(() => {
         setSelection([selectedNft]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedNft])
 
     return (
-        <ImageList sx={{ width: "100%", height: "100%", justifySelf: "center"}} cols={4}>
+        <ImageList sx={{ width: "100%", height: "100%", justifySelf: "center" }} cols={4}>
             {filteredList.map((nft) => (
                 <ImageListItem key={nft.mint.address.toString()}>
                     <img
@@ -69,8 +69,16 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterPr
                         srcSet={`${nft.json?.image}?w=248&fit=crop&auto=format&dpr=2 2x`}
                         alt={nft.name}
                         loading="lazy"
-                        onClick={() => {setSelectedNft(nft)}}
-                        style={{cursor: "pointer", border: selectedNft === nft ? "10px solid #0F0" : "none"}}
+                        onClick={() => {
+                            if (selectedNft && selectedNft.address === nft.address) {
+                                console.log("deselected");
+                                setSelectedNft(null);
+                            }
+                            else {
+                                setSelectedNft(nft);
+                            }
+                        }}
+                        style={{ cursor: "pointer", border: selectedNft === nft ? "10px solid #0F0" : "none" }}
                     />
                     <ImageListItemBar
                         title={nft.name}
