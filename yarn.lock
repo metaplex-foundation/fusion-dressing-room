@@ -1519,7 +1519,7 @@
   dependencies:
     "@solana/wallet-adapter-base" "^0.9.22"
 
-"@solana/wallet-adapter-react-ui@^0.9.27":
+"@solana/wallet-adapter-react-ui@^0.9.29":
   version "0.9.29"
   resolved "https://registry.yarnpkg.com/@solana/wallet-adapter-react-ui/-/wallet-adapter-react-ui-0.9.29.tgz#73752f336c740a65fcb0ad9153a9b6b34b56bac8"
   integrity sha512-y6SV4LH6iB+gmfGxNB19B4jo2++bcj76FmZaELtLDcKv4bA+Be1bX+7gIkqadcvUXeyiKdAybXIQqyOE5ntBNg==
