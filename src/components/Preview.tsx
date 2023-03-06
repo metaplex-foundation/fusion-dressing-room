@@ -1,16 +1,25 @@
-import { Nft, Sft } from '@metaplex-foundation/js';
+import { Nft, NftWithToken, Sft, SftWithToken } from '@metaplex-foundation/js';
 import { Button, Stack } from '@mui/material';
 import { FC, useEffect, useRef, useState } from 'react';
 
 export class PreviewProps {
     parent: Nft;
     traits: (Nft | Sft)[];
+    fusedTraits: (Nft | Sft)[];
 }
 
-export const Preview: FC<PreviewProps> = ({ parent, traits }) => {
+export const Preview: FC<PreviewProps> = ({ parent, traits, fusedTraits }) => {
+    console.log("Traits:", traits);
+    console.log("Fused Traits:", fusedTraits);
+    let combinedTraits: (NftWithToken | SftWithToken)[] = [];
+    for (const trait of traits) {
+        if (trait && !nftContains(fusedTraits, trait)){
+            combinedTraits.push(trait as NftWithToken | SftWithToken);
+        }
+    }
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const imgLoadArray = new Array(1 + traits.length).fill(false);
-    const imgArray = new Array(1 + traits.length).fill(null);
+    const imgLoadArray = new Array(1 + combinedTraits.length).fill(false);
+    const imgArray = new Array(1 + combinedTraits.length).fill(null);
 
     // const handleDownload = async () => {
     //     let image = canvasRef.current.toDataURL("image/png").replace("image/png", "image/octet-stream");
@@ -50,10 +59,10 @@ export const Preview: FC<PreviewProps> = ({ parent, traits }) => {
             }
         }
 
-        for (let i = 0; i < traits.length; i++) {
-            if (!imgArray[i + 1] && traits[i] && traits[i].json) {
+        for (let i = 0; i < combinedTraits.length; i++) {
+            if (!imgArray[i + 1] && combinedTraits[i] && combinedTraits[i].json) {
                 imgArray[i + 1] = new Image();
-                imgArray[i + 1].src = traits[i].json.raw_image;
+                imgArray[i + 1].src = combinedTraits[i].json.raw_image;
                 imgArray[i + 1].onload = () => {
                     console.log("Loaded Trait " + i);
                     imgLoadArray[i + 1] = true;
@@ -61,7 +70,17 @@ export const Preview: FC<PreviewProps> = ({ parent, traits }) => {
                 }
             }
         }
-    }, [parent, traits])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [parent, combinedTraits])
+
+    useEffect(() => {
+        combinedTraits = [];
+        for (const trait of traits) {
+            if (trait && !nftContains(fusedTraits, trait)){
+                combinedTraits.push(trait as NftWithToken | SftWithToken);
+            }
+        }
+    }, [traits])
 
     // useEffect(() => {
     //     console.log(imgArray);
@@ -86,23 +105,19 @@ export const Preview: FC<PreviewProps> = ({ parent, traits }) => {
     // }, [imgArray, imgLoadArray])
 
     return (
-        <Stack
-            direction="column"
-            justifyContent="center"
-            alignItems="center"
-            spacing={1}
-            width={"75%"}
-        >
-            <canvas
-                ref={canvasRef}
-                style={{ width: "100%" }}
-            />
-            {/* <Button
-                variant="contained" onClick={handleDownload}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-            >
-                Download
-            </Button> */}
-        </Stack>
+        <canvas
+            ref={canvasRef}
+            style={{ width: "100%" }}
+        />
     )
+}
+
+function nftContains(nfts: (Nft | Sft)[], nft: Nft | Sft) {
+    for (const selectedNft of nfts) {
+        console.log(nft);
+        if (selectedNft.mint.address === nft.mint.address) {
+            return true;
+        }
+    }
+    return false;
 }

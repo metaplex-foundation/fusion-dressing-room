@@ -12,12 +12,14 @@ import Stack from '@mui/material/Stack';
 // Store
 import useUserSOLBalanceStore from '../../stores/useUserSOLBalanceStore';
 import useUserNFTsStore from '../../stores/useUserNFTsStore';
-import { findTriflePda, createTrifleAccount, getConstraintModel } from '../../utils/trifle';
+import { findTriflePda, createTrifleAccount, getConstraintModel, fuseTraits, getTrifleNfts, defuseTraits } from '../../utils/trifle';
 import { Collection } from 'components/Collection';
-import { Nft, PublicKey, Sft } from '@metaplex-foundation/js';
-import { EscrowConstraintModel } from '@metaplex-foundation/mpl-trifle';
+import { Nft, NftWithToken, PublicKey, Sft, SftWithToken } from '@metaplex-foundation/js';
+import { EscrowConstraintModel, Trifle } from '@metaplex-foundation/mpl-trifle';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import { Preview } from 'components/Preview';
+import { useInterval } from 'usehooks-ts';
+import { FusedTraits } from 'components/FusedTraits';
 
 function filterByParentCollection(nft: Nft | Sft, props: any) {
   return (nft.collection?.address && (nft.collection?.address.toString() === process.env.NEXT_PUBLIC_PARENT_COLLECTION_MINT));
@@ -46,22 +48,25 @@ export const FusionView: FC = ({ }) => {
     return 0;
   })
   const { getUserNFTs } = useUserNFTsStore();
-  const [selectedParent, setSelectedParent] = useState<Nft | Sft>(null);
-  const [selectedTraitsMap, setSelectedTraitsMap] = useState<Map<string, (Nft | Sft)[]>>(new Map<string, (Nft | Sft)[]>());
-  const [selectedTraits, setSelectedTraits] = useState<(Nft | Sft)[]>([]);
+  const [selectedParent, setSelectedParent] = useState<NftWithToken | SftWithToken>(null);
+  const [selectedTraitsMap, setSelectedTraitsMap] = useState<Map<string, (NftWithToken | SftWithToken)[]>>(new Map<string, (NftWithToken | SftWithToken)[]>());
+  const [selectedTraits, setSelectedTraits] = useState<(NftWithToken | SftWithToken)[]>([]);
+  const [fusedTraits, setFusedTraits] = useState<(NftWithToken | SftWithToken)[]>([]);
+  const [trifleNfts, setTrifleNfts] = useState<(NftWithToken | SftWithToken)[]>([]);
   const [needsTrifle, setNeedsTrifle] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
   const [constraintModel, setConstraintModel] = useState<EscrowConstraintModel>(null);
   const [traitCollections, setTraitCollections] = useState(new Map<string, PublicKey>());
+  const [delay, setDelay] = useState<number>(2000);
   // console.log(selectedParent);
 
-  function setSelectionParent(nfts: (Nft | Sft)[]) {
+  function setSelectionParent(nfts: (NftWithToken | SftWithToken)[]) {
     if (nfts.length > 0) {
       setSelectedParent(nfts[0]);
     }
   }
 
-  function setSelectionTraits(key: string, nfts: (Nft | Sft)[]) {
+  function setSelectionTraits(key: string, nfts: (NftWithToken | SftWithToken)[]) {
     if (nfts && nfts.length > 0) {
       let nftsMap = selectedTraitsMap;
       nftsMap = nftsMap.set(key, nfts);
@@ -72,9 +77,15 @@ export const FusionView: FC = ({ }) => {
     console.log(selectedTraits);
   }
 
+  function setSelectionFusedTraits(nfts: (NftWithToken | SftWithToken)[]) {
+    console.log("nfts", nfts);
+    setFusedTraits(nfts);
+    console.log(fusedTraits);
+  }
+
   const handleClose = () => {
     console.log("handleClose");
-    createTrifleAccount(connection, selectedParent as Nft, wallet);
+    createTrifleAccount(connection, selectedParent as NftWithToken, wallet);
     setOpen(false);
   };
 
@@ -92,23 +103,35 @@ export const FusionView: FC = ({ }) => {
   }, [wallet.publicKey, connection, getUserNFTs])
 
   useEffect(() => {
-    async function check_trifle() {
-      if (connection && selectedParent) {
-        const auth_pubkey = new PublicKey(process.env.NEXT_PUBLIC_FUSION_AUTHORITY);
-        const [triflePda] = findTriflePda(selectedParent.mint.address, auth_pubkey);
-        const trifleAccount = await connection.getAccountInfo(triflePda);
-        if (trifleAccount == null) {
-          setNeedsTrifle(true);
-          setOpen(true);
-        }
-        else {
-          setNeedsTrifle(false);
-          setOpen(false);
+    if (connection && selectedParent) {
+      setDelay(2000);
+    }
+  }, [connection, selectedParent, open])
+
+  useInterval(
+    () => {
+      async function check_trifle() {
+        if (connection && selectedParent) {
+          const auth_pubkey = new PublicKey(process.env.NEXT_PUBLIC_FUSION_AUTHORITY);
+          const [triflePda] = findTriflePda(selectedParent.mint.address, auth_pubkey);
+          const trifleAccount = await connection.getAccountInfo(triflePda);
+          if (trifleAccount == null) {
+            setNeedsTrifle(true);
+            setOpen(true);
+          }
+          else {
+            setNeedsTrifle(false);
+            setOpen(false);
+            setDelay(null);
+
+            setTrifleNfts(await getTrifleNfts(connection, Trifle.fromAccountInfo(trifleAccount)[0]));
+          }
         }
       }
-    }
-    check_trifle();
-  }, [connection, selectedParent, open])
+      check_trifle();
+    },
+    delay
+  )
 
   useEffect(() => {
     async function get_cm() {
@@ -156,10 +179,36 @@ export const FusionView: FC = ({ }) => {
             loading="lazy"
             style={{ width: "75%", objectFit: "contain" }}
           /> */}
-          <Preview
-            parent={selectedParent as Nft}
-            traits={selectedTraits}
-          />
+          <Stack
+            direction="column"
+            // justifyContent="center"
+            alignItems="stretch"
+            spacing={2}
+            width={"75%"}
+          >
+            <Preview
+              parent={selectedParent as Nft}
+              traits={selectedTraits.concat(trifleNfts)}
+              fusedTraits={fusedTraits}
+            />
+            <FusedTraits setSelection={setSelectionFusedTraits} trifleNfts={trifleNfts} />
+            <Button
+              variant="contained"
+              onClick={() => {
+                defuseTraits(
+                  connection,
+                  wallet,
+                  selectedParent as NftWithToken,
+                  fusedTraits,
+                  new PublicKey(process.env.NEXT_PUBLIC_FUSION_AUTHORITY)
+                );
+                // setDelay(5000);
+              }}
+              style={{ backgroundColor: "#f50057", color: "white", maxWidth: "100px", alignSelf: "center" }}
+            >
+              ⚛Defuse⚛
+            </Button>
+          </Stack>
           <Stack
             direction="column"
             justifyContent="space-evenly"
@@ -174,6 +223,22 @@ export const FusionView: FC = ({ }) => {
               </div>
             ))
             }
+            <Button
+              variant="contained"
+              onClick={() => {
+                fuseTraits(
+                  connection,
+                  wallet,
+                  selectedParent as NftWithToken,
+                  selectedTraits,
+                  new PublicKey(process.env.NEXT_PUBLIC_FUSION_AUTHORITY)
+                );
+                // setDelay(5000);
+              }}
+              style={{ backgroundColor: "#f50057", color: "white", maxWidth: "100px", alignSelf: "center" }}
+            >
+              ⚛Fuse⚛
+            </Button>
           </Stack>
         </Stack >
         <Dialog open={open} onClose={handleCancel}>

@@ -10,7 +10,6 @@ import pkg from '../../package.json';
 import ImageList from '@mui/material/ImageList';
 import ImageListItem from '@mui/material/ImageListItem';
 import ImageListItemBar from '@mui/material/ImageListItemBar';
-// import ListSubheader from '@mui/material/ListSubheader';
 
 // Store
 import useUserSOLBalanceStore from '../stores/useUserSOLBalanceStore';
@@ -18,50 +17,32 @@ import useUserNFTsStore from '../stores/useUserNFTsStore';
 import { NftWithToken, SftWithToken } from '@metaplex-foundation/js';
 import { Trifle } from '@metaplex-foundation/mpl-trifle';
 
-export class CollectionProps {
+export class FusedTraitsProps {
     setSelection: (nfts: (NftWithToken | SftWithToken)[]) => void;
-    filter: (nft: NftWithToken | SftWithToken, props: any) => boolean;
-    filterProps: any;
+    trifleNfts: (NftWithToken | SftWithToken)[];
 }
 
-export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterProps }) => {
-    const [selectedNft, setSelectedNft] = useState<NftWithToken | SftWithToken>(null);
+export const FusedTraits: FC<FusedTraitsProps> = ({ setSelection, trifleNfts }) => {
+    const [selectedNfts, setSelectedNfts] = useState<(NftWithToken | SftWithToken)[]>(trifleNfts);
 
     const wallet = useWallet();
     const { connection } = useConnection();
 
-    const nftList = useUserNFTsStore((s) => s.nftList).sort((nft0, nft1) => {
+    const nftList = trifleNfts.sort((nft0, nft1) => {
         if (nft0.name < nft1.name) return -1;
         if (nft0.name > nft1.name) return 1;
         return 0;
     });
 
-
-    let filteredList = [];
-    for (const nft of nftList) {
-        if (filter(nft, filterProps)) {
-            filteredList.push(nft);
-        }
-    }
-    // console.log(filteredList);
-
-    const { getUserNFTs } = useUserNFTsStore()
-
     useEffect(() => {
-        if (wallet.publicKey) {
-            // console.log(wallet.publicKey.toBase58())
-            getUserNFTs(wallet.publicKey, connection)
-        }
-    }, [wallet.publicKey, connection, getUserNFTs])
-
-    useEffect(() => {
-        setSelection([selectedNft]);
+        console.log("selectedNft", selectedNfts);
+        setSelection(selectedNfts);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedNft])
+    }, [selectedNfts])
 
     return (
-        <ImageList sx={{ width: "100%", height: "100%", justifySelf: "center" }} cols={4}>
-            {filteredList.map((nft) => (
+        <ImageList sx={{ width: "auto", height: "auto", justifySelf: "center" }} cols={3}>
+            {nftList.map((nft) => (
                 <ImageListItem key={nft.mint.address.toString()}>
                     <img
                         src={`${nft.json?.image}?w=248&fit=crop&auto=format`}
@@ -69,15 +50,17 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterPr
                         alt={nft.name}
                         loading="lazy"
                         onClick={() => {
-                            if (selectedNft && selectedNft.address === nft.address) {
-                                console.log("deselected");
-                                setSelectedNft(null);
+                            for (const selectedNft of selectedNfts) {
+                                if (selectedNft.address === nft.address) {
+                                    console.log("deselected");
+                                    setSelectedNfts(selectedNfts.filter((nft) => nft.address !== selectedNft.address));
+                                    return;
+                                }
                             }
-                            else {
-                                setSelectedNft(nft);
-                            }
+                            setSelectedNfts(selectedNfts.concat([nft]));
+                            
                         }}
-                        style={{ cursor: "pointer", border: selectedNft === nft ? "10px solid #0F0" : "none" }}
+                    style={{ cursor: "pointer", border: isSelected(selectedNfts, nft) ? "10px solid #0F0" : "none" }}
                     />
                     <ImageListItemBar
                         title={nft.name}
@@ -88,3 +71,12 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterPr
         </ImageList>
     );
 };
+
+function isSelected(selectedNfts: (NftWithToken | SftWithToken)[], nft: NftWithToken | SftWithToken) {
+    for (const selectedNft of selectedNfts) {
+        if (selectedNft.address === nft.address) {
+            return true;
+        }
+    }
+    return false;
+}
