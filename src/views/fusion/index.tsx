@@ -56,6 +56,7 @@ export const FusionView: FC = ({ }) => {
   const [needsTrifle, setNeedsTrifle] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
   const [constraintModel, setConstraintModel] = useState<EscrowConstraintModel>(null);
+  const [schema, setSchema] = useState<any>(null);
   const [traitCollections, setTraitCollections] = useState(new Map<string, PublicKey>());
   const [delay, setDelay] = useState<number>(2000);
   // console.log(selectedParent);
@@ -153,10 +154,17 @@ export const FusionView: FC = ({ }) => {
 
         setTraitCollections(traitCollections);
         console.log(traitCollections);
+
+        console.log(constraintModel);
+
+        let schema = await (await fetch(constraintModel.schemaUri)).json();
+        console.log(schema);
+        setSchema(schema);
       }
     }
     get_cm();
   }, [connection, constraintModel])
+
 
   if (selectedParent == null) {
     return (
@@ -190,6 +198,7 @@ export const FusionView: FC = ({ }) => {
               parent={selectedParent as Nft}
               traits={selectedTraits.concat(trifleNfts)}
               fusedTraits={fusedTraits}
+              schema={schema}
             />
             <FusedTraits setSelection={setSelectionFusedTraits} trifleNfts={trifleNfts} />
             <Button

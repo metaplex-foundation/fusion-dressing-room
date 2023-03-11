@@ -6,9 +6,11 @@ export class PreviewProps {
     parent: Nft;
     traits: (Nft | Sft)[];
     fusedTraits: (Nft | Sft)[];
+    schema: any;
 }
 
-export const Preview: FC<PreviewProps> = ({ parent, traits, fusedTraits }) => {
+export const Preview: FC<PreviewProps> = ({ parent, traits, fusedTraits, schema }) => {
+    let [parentImageUri, setParentImageUri] = useState<string>(parent.json.image);
     console.log("Traits:", traits);
     console.log("Fused Traits:", fusedTraits);
     let combinedTraits: (NftWithToken | SftWithToken)[] = [];
@@ -30,6 +32,11 @@ export const Preview: FC<PreviewProps> = ({ parent, traits, fusedTraits }) => {
     // };
 
     useEffect(() => {
+        async function loadImages() {
+            setParentImageUri(await get_default_image(parent, schema));
+        }
+        loadImages();
+
         const render = () => {
             const canvas = canvasRef.current
             const context = canvas.getContext('2d')
@@ -51,7 +58,7 @@ export const Preview: FC<PreviewProps> = ({ parent, traits, fusedTraits }) => {
 
         if (!imgArray[0]) {
             imgArray[0] = new Image();
-            imgArray[0].src = parent.json.image;
+            imgArray[0].src = parentImageUri;
             imgArray[0].onload = () => {
                 console.log("Loaded Parent");
                 imgLoadArray[0] = true;
@@ -120,4 +127,24 @@ function nftContains(nfts: (Nft | Sft)[], nft: Nft | Sft) {
         }
     }
     return false;
+}
+
+async function get_default_image(nft: Nft, schema: any) {
+    let imageUri = nft.json.image;
+    const name = nft.name;
+    const prefix = schema.base_lookup.prefix;
+    console.log("Name:", name);
+    console.log("Prefix:", prefix);
+    const num = name.replace(prefix, "");
+    console.log("Num:", num);
+    const uri = schema.base_lookup.lut[num];
+    console.log("URI:", uri);
+    if (uri) {
+        const response = await fetch(uri);
+        const data = await response.json();
+        imageUri = data.image;
+        console.log("Image URI:", imageUri);
+    }
+
+    return imageUri;
 }
