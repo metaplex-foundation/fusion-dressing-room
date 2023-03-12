@@ -36,7 +36,9 @@ export const Preview: FC<PreviewProps> = ({ parent, traits, fusedTraits, schema 
             setParentImageUri(await get_default_image(parent, schema));
         }
         loadImages();
+    });
 
+    useEffect(() => {
         const render = () => {
             const canvas = canvasRef.current
             const context = canvas.getContext('2d')
@@ -69,6 +71,7 @@ export const Preview: FC<PreviewProps> = ({ parent, traits, fusedTraits, schema 
         for (let i = 0; i < combinedTraits.length; i++) {
             if (!imgArray[i + 1] && combinedTraits[i] && combinedTraits[i].json) {
                 imgArray[i + 1] = new Image();
+                console.log(combinedTraits[i].json);
                 imgArray[i + 1].src = combinedTraits[i].json.raw_image;
                 imgArray[i + 1].onload = () => {
                     console.log("Loaded Trait " + i);
