@@ -51,6 +51,7 @@ export const Collection: FC<CollectionProps> = ({ setSelection, filter, filterPr
         if (wallet.publicKey) {
             // console.log(wallet.publicKey.toBase58())
             getUserNFTs(wallet.publicKey, connection)
+            console.log("Num NFTS: ", nftList.length);
         }
     }, [wallet.publicKey, connection, getUserNFTs])
 

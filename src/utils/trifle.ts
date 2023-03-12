@@ -218,8 +218,20 @@ export const fuseTraits = async (connection: Connection, wallet: WalletContextSt
             }
         ));
         // }
+
+        if (instructions.length >= 2) {
+            await sendTx(connection, instructions, wallet);
+            instructions = [];
+        }
     }
 
+    if (instructions.length > 0) {
+        await sendTx(connection, instructions, wallet);
+        instructions = [];
+    }
+}
+
+const sendTx = async (connection: Connection, instructions: TransactionInstruction[], wallet: WalletContextState) => {
     let blockhash = await connection
         .getLatestBlockhash()
         .then((res) => res.blockhash);
@@ -239,11 +251,11 @@ export const fuseTraits = async (connection: Connection, wallet: WalletContextSt
 
     try {
         const txid = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: true });
-        console.log("Fused!");
+        console.log("(De)Fused!");
         console.log(txid);
     } catch (e) {
         console.log(e);
-        console.log("Failed to fuse");
+        console.log("Failed to (de)fuse");
     }
 }
 
@@ -311,31 +323,15 @@ export const defuseTraits = async (connection: Connection, wallet: WalletContext
             }
         ));
         // }
+
+        if (instructions.length >= 2) {
+            await sendTx(connection, instructions, wallet);
+            instructions = [];
+        }
     }
 
-    let blockhash = await connection
-        .getLatestBlockhash()
-        .then((res) => res.blockhash);
-
-    // create v0 compatible message
-    const messageV0 = new TransactionMessage({
-        payerKey: wallet.publicKey,
-        recentBlockhash: blockhash,
-        instructions,
-    }).compileToV0Message();
-
-    const transaction = new VersionedTransaction(messageV0);
-
-    // sign your transaction with the required `Signers`
-    const signedTx = await wallet.signTransaction(transaction);
-    console.log(signedTx.serialize().length);
-
-    try {
-        const txid = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: true });
-        console.log("Defused!");
-        console.log(txid);
-    } catch (e) {
-        console.log(e);
-        console.log("Failed to defuse");
+    if (instructions.length > 0) {
+        await sendTx(connection, instructions, wallet);
+        instructions = [];
     }
 }
